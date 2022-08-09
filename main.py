@@ -2,6 +2,7 @@
 
 import csv
 import webbrowser
+import time
 import pygame as pg
 
 from widgets.single import *
@@ -70,7 +71,7 @@ def statistics(screen):
     if page != []: pages.append(page)
 
     button_menu = Button(screen, "button menu", width=256, height=64,
-                         filling_color=colors[128],
+                         filling_color=colors["grey"],
                          border_radius=4,
                          text_string="Menu", text_color=colors["white"],
                          font_type=FONT_TYPE, font_size=40,
@@ -270,13 +271,11 @@ def award_ceremony(screen, dimension, players):
         text_string = f"{players[winner].name} won against {players[loser].name} in {dimension} dimensions!"
         if dimension in [3, 4]:
             text_string = text_string.replace("!", f" {players[winner].score['amount']} to {players[loser].score['amount']}!")
-        if first:
-            text_string += ("\n" + f"{players[winner].name} scored first!")
 
         with open("statistics.csv", "a") as csv_file:
             csv_file.write("\n" + ",".join([players[winner].name, players[loser].name, str(dimension)]))
 
-    label_anouncement = Label(screen, "label anouncement", width=256, height=128,
+    label_anouncement = Label(screen, "label anouncement", width=0, height=0,
                               filling_color=COLOR_BG,
                               text_string=text_string, font_size=40,
                               font_type=FONT_TYPE)
@@ -284,21 +283,31 @@ def award_ceremony(screen, dimension, players):
     buttons_move = Buttons(screen, "buttons move",
                            grid_amount_columns=2,
                            members=[Button(screen, name, width=256, height=64,
-                                           filling_color=colors[128],
+                                           filling_color=filling_color,
                                            border_radius=4,
                                            text_string=name.capitalize(), text_color=colors["white"],
                                            font_type=FONT_TYPE, font_size=40,
                                            response="hold",
                                            filling_color_semiclicked=colors["green"],
                                            unclickable_outside=False)
-                                       for name in ["menu", "statistics"]],
+                                       for name, filling_color in zip(["menu", "statistics"], [colors["grey"], colors[128]])],
                            mapping_position={0: (0, 0), 1: (1, 0)})
 
     boxes_award_ceremony = Boxes(screen, name="boxes award ceremony",
-                                 grid_amount_rows=4, grid_amount_columns=5,
+                                 grid_amount_rows=10, grid_amount_columns=5,
                                  members=[label_anouncement, buttons_move],
-                                 mapping_position={"label anouncement": (2, 1), "buttons move": (1, 2)},
-                                 mapping_bound={"buttons move": (3, 2)})
+                                 mapping_position={"label anouncement": (2, 2), "buttons move": (1, 7)},
+                                 mapping_bound={"buttons move": (3, 7)})
+
+    if winner is not None and first:
+
+        label_anouncement_first = Label(screen, "label anouncement first", width=0, height=0,
+                                        filling_color=COLOR_BG,
+                                        text_string=f"{players[winner].name} scored first!", font_size=40,
+                                        font_type=FONT_TYPE)
+
+        boxes_award_ceremony.members.append(label_anouncement_first)
+        boxes_award_ceremony.mapping["position"].update({"label anouncement first": (2, 3)})
 
     boxes_award_ceremony.width = screen.get_width()
     boxes_award_ceremony.height = screen.get_height()
@@ -411,6 +420,11 @@ def play(screen, dimension, players):
         pg.time.delay(DELAY)
 
         pg.display.update()
+
+        if not game.run:
+            time.sleep(1)
+            return award_ceremony(screen, dimension, players)
+
         screen.fill(COLOR_BG)
 
         draw(boxes_play)
@@ -449,9 +463,6 @@ def play(screen, dimension, players):
                     player_labels[i].text_color = colors["green"]
                 else:
                     player_labels[i].text_color = colors[32]
-
-            if not game.run:
-                return award_ceremony(screen, dimension, players)
 
             if quit_game.clicked(event):
                 return run, screen
